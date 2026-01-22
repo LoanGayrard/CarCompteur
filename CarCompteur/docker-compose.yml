@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: parking_postgres
+    environment:
+      POSTGRES_DB: parkingdb
+      POSTGRES_USER: parkinguser
+      POSTGRES_PASSWORD: parkingpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - parking_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parkinguser -d parkingdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    container_name: parking_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
+      ASPNETCORE_ENVIRONMENT: "Development"
+
+      ConnectionStrings__ParkingDb: "Host=postgres;Port=5432;Database=parkingdb;Username=parkinguser;Password=parkingpass"
+
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  parking_pg_data:
